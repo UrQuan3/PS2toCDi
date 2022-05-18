@@ -1,5 +1,26 @@
 # PS/2 Mouse to CDi adapter
 
+Sourcecode for the PS2 mouse to CD-i adapter that I designed.  Code adapted from an earlier PS2toCDi project by danbrakeley, who used anarterb's SNEStoCDi project, which was adapted from Paul Hackmann's gamepad adapter code.  Ah, the power of opensource.
+
+As some PS2 mice pull more power than the CD-i provides, I suggest having an external 5v power source.  Any USB charger will work nicely.  I don't suggest back-feeding the 5v into the CDi (connecting the USB 5v to the CDi 5v).  Seems like it could end poorly to me.
+
+WARNING: USB to PS2 mouse adapters are not true adapters, they simply connect wires.  The USB mouse must know how to 'talk' PS2 or the adapter will not work.  In general, if the mouse did not come with a PS2 adapter, it will not work.
+
+In a serious strangeness, it appears that the CD-i does not provide mouse acceleration.  Since I do not own a CD-i mouse to test with, I do not know if the mouse provided the accelration calculations, or if mouse movements were simply linear.  I couldn't stand it, so I added acceleration in the adapter.  If you do not like the acceleration or wish to adjust it, look for the lines below and change the 'Y' component.  Must be an integer, and 0 = no acceleration.
+
+    ```text
+    //X*v linear component, Y*(v^2) acceleration component
+    vnew = (1 * v) + (2 * sq(v));
+    ```
+
+I believe the original project was licensed "CC-BY" creative commons attrribution, so that is the license for this as well.
+
+Original post: version 1.0
+Built and tested around the Arduino Nano Every
+
+
+***ORIGINAL README BELOW***
+
 ## The backstory
 
 I bought an old Philips CDi off ebay, but it has been hard to find affordable input devices for it. I eventually built a SNEStoCDi to allow using SNES controllers, which works great, but I still wanted a mouse, so I hacked this project together to allow a PS2 mouse to be used with with a CDi.
