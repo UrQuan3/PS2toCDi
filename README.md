@@ -8,10 +8,10 @@ WARNING: USB to PS2 mouse adapters are not true adapters, they simply connect wi
 
 In a serious strangeness, it appears that the CD-i does not provide mouse acceleration.  Since I do not own a CD-i mouse to test with, I do not know if the mouse provided the accelration calculations, or if mouse movements were simply linear.  I couldn't stand it, so I added acceleration in the adapter.  If you do not like the acceleration or wish to adjust it, look for the lines below and change the 'Y' component.  Must be an integer, and 0 = no acceleration.
 
-    ```text
-    //X*v linear component, Y*(v^2) acceleration component
-    vnew = (1 * v) + (2 * sq(v));
-    ```
+   ```text
+   //X*v linear component, Y*(v^2) acceleration component
+   vnew = (1 * v) + (2 * sq(v));
+   ```
 
 I believe the original project was licensed "CC-BY" creative commons attrribution, so that is the license for this as well.
 
