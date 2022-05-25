@@ -52,7 +52,7 @@
 const bool ENABLE_CDI = true;
 
 // if true, logs debug info to serial console
-const bool DEBUG_OUT_ENABLED = false;
+const bool DEBUG_OUT_ENABLED = true;
 
 
 // digital pins
@@ -67,7 +67,7 @@ const int CDI_RTS_PIN_A = A7; // CDI RTS signal
 
 
 // cdi consts
-const byte CDI_RELATIVE_DEVICE_ID = 0b11001101;
+const byte CDI_RELATIVE_DEVICE_ID = 0b11001101;   //he even had it, and didn't use it
 const int CDI_RTS_THRESHOLD = 328; // threshold for the CDi RTS analog detection
 
 // cdi globals
@@ -81,24 +81,29 @@ const byte MOUSE_BTN_RIGHT  = 0b0010;
 const byte MOUSE_BTN_MASK = MOUSE_BTN_LEFT | MOUSE_BTN_RIGHT;
 
 // mouse globals
-PS2Mouse mouse(PS2_CLOCK_PIN, PS2_DATA_PIN, STREAM);
+PS2Mouse mouse(PS2_CLOCK_PIN, PS2_DATA_PIN, REMOTE);
 byte prevBtns = 0;
 
 
 void setup()
 {
+  delay(1000);                  //My *newest* mouse takes a long time to start up
+  pinMode(LED_PIN, OUTPUT);
+
   if (DEBUG_OUT_ENABLED) {
     Serial.begin(38400);
   }
 
   mouse.initialize();
-
+  mouse.set_sample_rate(100);
+  mouse.set_resolution(0x00);   //drastically changes mouse sensitivity 0x00 to 0x03 valid
+  mouse.set_scaling_1_1();      //default
+  
   if (ENABLE_CDI) {
     // open serial interface to send data to the CDi
     serialCDI.begin(1200);
   }
 
-  pinMode(LED_PIN, OUTPUT);
 }
 
 // main loop
@@ -108,10 +113,11 @@ void loop()
   if(!assertRTS()) {
     digitalWrite(LED_PIN, HIGH);
     while(!assertRTS()) { } // wait for CDi to assert the RTS line
-    if(firstId) delay(100);
+    if(firstId) delay(200);
     else delay(1);
-    firstId = false;
-    serialCDI.write(0b11001010); // send device id ("maneuvering device")
+    //firstId = false;
+    //serialCDI.write(0b11001010); // send device id ("maneuvering device")
+    serialCDI.write(0b11001101); // send device id ("relative device")
   }
   digitalWrite(LED_PIN, LOW);
 
@@ -141,7 +147,7 @@ void loop()
   v = sqrt(sq(dx) + sq(dy));    //ignoring time, assuming dt = 1
   if(v != 0) {
     //X*v linear component, Y*(v^2) acceleration component
-    vnew = (1 * v) + (2 * sq(v));
+    vnew = (1 * v) + (1 * sq(v));
     //ddnew = vnew * dt;         //with time
     //dx = dx * ddnew / dd;   //with time
     //dy = dy * ddnew / dd;   //with time
@@ -189,19 +195,22 @@ void loop()
   byte padbyte1 = 0b10000000 | (x & 0b00111111);
   byte padbyte2 = 0b10000000 | (y & 0b00111111);
 
-  //if((padbyte0 != oldpadbyte0) || (padbyte1 != 0b10000000) || (padbyte2 != 0b10000000) || ((padbyte0 & 0b00001111) != 0))  // see if state has changed
-  if((prevBtns != btns) || (x != 0) || (y != 0))  // see if state has changed
+  if((prevBtns != btns) || (x != 0) || (y != 0) || (firstId == true))  // see if state has changed
   {
-    //Ah, if !assertRTS() during send, the rest of the send is lost, and save state prevents resend.
-    //Make sure all three bytes send before saving to oldpadbyteX
-    if(assertRTS()) goodsend = false;
-    if(assertRTS()) {
-      serialCDI.write(padbyte0);
+    if (ENABLE_CDI) {
+      //Ah, if !assertRTS() during send, the rest of the send is lost, and save state prevents resend.
+      //Make sure all three bytes send before saving to oldpadbyteX
+      //Sadly, I really don't know what to do with mouse data if a send is interrupted, so it's getting junked.
       if(assertRTS()) {
-        serialCDI.write(padbyte1);
+        //goodsend = false;
+        serialCDI.write(padbyte0);
         if(assertRTS()) {
-          serialCDI.write(padbyte2);
-          goodsend = true;
+          serialCDI.write(padbyte1);
+          if(assertRTS()) {
+            serialCDI.write(padbyte2);
+            goodsend = true;
+            firstId = false;      //force a full packet the first time
+          }
         }
       }
     }
@@ -216,16 +225,18 @@ void loop()
   }
 
   if (DEBUG_OUT_ENABLED) {
-    printBits(padbyte0);
-    Serial.print(" ");
-    printBits(padbyte1);
-    Serial.print(" ");
-    printBits(padbyte2);
-    Serial.print(" : ");
-    Serial.print(int8_t(x));
-    Serial.print(", ");
-    Serial.print(int8_t(y));
-    Serial.println();
+    if(goodsend) {
+      printBits(padbyte0);
+      Serial.print(" ");
+      printBits(padbyte1);
+      Serial.print(" ");
+      printBits(padbyte2);
+      Serial.print(" : ");
+      Serial.print(int8_t(x));
+      Serial.print(", ");
+      Serial.print(int8_t(y));
+      Serial.println();
+    }
   }
 /**/
 }
